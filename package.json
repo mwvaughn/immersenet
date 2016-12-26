@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify index.js -t [ babelify --presets [ es2015 ] ] | uglifyjs > build/immersenet.min.js"
+    "build": "browserify index.js -t [ babelify --presets [ es2015 ] ] > build/immersenet.min.js"
   },
   "keywords": [
     "testing"

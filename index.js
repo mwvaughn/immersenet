@@ -1,5 +1,5 @@
 //load sample data
-let data = require('./sample_data/interactions.json');
+let data = require('./sample_data/gefx_interactions.json');
 
 //external dependencies
 const aframe = require('aframe');
@@ -41,7 +41,40 @@ const scene = $('a-scene');
 
 //create graph
 const g = ngraph();
-data.forEach(d => g.addLink(d.source, d.target));
+if (('edges' in data) && ('nodes' in data)) {
+
+  function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
+    return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
+  }
+
+  var node_count = data.nodes.length;
+
+  // Scan nodes to get size range (and other global attributes)
+  var nodeSizeRange = { max: 0, min: 1000000};
+  for (var i = 0; i < node_count; i++) {
+    var jnode = data.nodes[i];
+    if (jnode.size) {
+      if (jnode.size > nodeSizeRange.max) { nodeSizeRange.max = jnode.size }
+      if (jnode.size < nodeSizeRange.min) { nodeSizeRange.min = jnode.size }
+    }
+  }
+  // Scan edges to get weight range (and other global attributes)
+  var edgeSizeRange = { max: 0, min: 1000000};
+  for (var k = 0; k < data.edges.length; k++) {
+    var jedge = data.edges[k];
+    if (jedge.size) {
+      if (jedge.size > edgeSizeRange.max) { edgeSizeRange.max = jedge.size }
+      if (jedge.size < edgeSizeRange.min) { edgeSizeRange.min = jedge.size }
+    }
+  }
+
+
+  data.nodes.forEach(n => g.addNode(n.id, {'color': n.color, 'label': n.label, 'size': scaleBetween(n.size, 1.0, 5.0, nodeSizeRange.min, nodeSizeRange.max) }));
+  data.edges.forEach(e => g.addLink(e.source, e.target, {'weight': scaleBetween(e.size, 1.0, 5.0, edgeSizeRange.min, edgeSizeRange.max)} ));
+
+} else {
+  data.forEach(d => g.addLink(d.source, d.target));
+}
 
 const layout = layout3d(g, {
   springLength: 0.00001,
@@ -64,7 +97,7 @@ for (var i = 0; i < ITERATIONS_COUNT; i++) {
 ].forEach( c => {
   $(`
     <a-sphere position="${c.x} ${c.y} ${c.z}"
-              color="red"
+              material="color: red; transparent: true; opacity: 0.66"
               radius="2"
               click-drag
               class="teleport"
@@ -90,17 +123,18 @@ g.forEachNode(node => {
   //get node position
   let nodePos = layout.getNodePosition(node.id);
   let col = colmap[clusters.getClass(node.id)].color;
+  let size = node.data.size * 0.65;
   $(`
     <a-box position="${nodePos.x} ${nodePos.y} ${nodePos.z}"
               color="${col}"
-              id="${node.id}"
-              height="0.65"
-              width="0.65"
-              depth="0.65"
+              id="${node.data.id}"
+              height="${size}"
+              width="${size}"
+              depth="${size}"
               draw="background: ${col}"
               class="gene"
               cursor-listener-gene
-              textwrap="text: ${node.id};
+              textwrap="text: ${node.data.label};
                         color: #fff;
                         text-align: center;
                         x: 128; y:128;
@@ -110,7 +144,11 @@ g.forEachNode(node => {
 });
 
 //set camera position
-let firstNode = layout.getNodePosition(g.getNode(data[0].target).id);
+if (('edges' in data) && ('nodes' in data)) {
+  let firstNode = layout.getNodePosition(g.getNode(data.edges[0].target).id);
+} else {
+  let firstNode = layout.getNodePosition(g.getNode(data[0].target).id);
+}
 $(`
   <a-entity position="20 0 20"
             physics="mass: 0">
@@ -138,19 +176,23 @@ const path = [];
 g.forEachNode(node => {
   path.push(node.links.map(l => {
     let lobj = layout.getLinkPosition(l.id);
+    let lsize = l.data.weight;
     return `${lobj.from.x} ${lobj.from.y} ${lobj.from.z},
             ${lobj.to.x} ${lobj.to.y} ${lobj.to.z}`;
   }).join(', '));
 });
 
 path.forEach(p => {
+  //let weight = p.data.weight * 0.5;
+  let weight = 1.0;
+  console.log('p: ', p);
   $(`
     <a-entity class="link"
               mixin="edge"
               visible="true"
               line="path: ${p};
                     color: #ccc";
-                    width: 0.5>
+                    width: ${weight}>
     </a-entity>
   `).appendTo(scene);
 });

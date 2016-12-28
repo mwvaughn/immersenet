@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify index.js -t [ babelify --presets [ es2015 ] ] > build/immersenet.min.js"
+    "dist": "cat data.js index.js > index.tmp.js; browserify index.tmp.js -t [ babelify --presets [ es2015 ] ] | uglifyjs > build/immersenet.min.js; index.tmp.js",
+    "build": "cat data.js index.js > index.tmp.js; browserify index.tmp.js -t [ babelify --presets [ es2015 ] ] > build/immersenet.js; index.tmp.js",
+    "build-userdata": "cat index.js > index.tmp.js; browserify index.tmp.js -t [ babelify --presets [ es2015 ] ] > build/immersenet.userdata.js; rm index.tmp.js"
   },
   "keywords": [
     "testing"

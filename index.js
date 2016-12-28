@@ -1,5 +1,3 @@
-//load sample data
-let data = require('./sample_data/gefx_interactions.json');
 
 //external dependencies
 const aframe = require('aframe');
